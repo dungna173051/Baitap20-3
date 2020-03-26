@@ -1,0 +1,120 @@
+#include <iostream>
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32")
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
+int main() {
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+		printf("Khoi tao winsock that bai!");
+		return 0;
+	}
+
+	char command[100];
+	char port[10];
+	char file1[30];
+	char file2[30];
+	SOCKET client;
+	SOCKET listener;
+	SOCKADDR_IN addr;
+
+
+	
+	cout << "Nhap lenh";
+	gets_s(command);
+
+	
+	char* tempt = strstr(command, " ");
+	tempt = tempt + 1;
+	
+	int k = 1;
+	for (int i = 0 ; ; i++) {
+		//gap ki tu space
+		if (tempt[i] == 32) {
+			switch (k) {
+				case 1: {
+					strncpy(port, tempt, i);	//copy i ky tu tempt thu dc chuoi port
+					port[i] = 0;
+					break;
+				}
+				case 2: {
+					strncpy(file1, tempt, i); //copy i ky tu tempt thu dc chuoi file1
+					file1[i] = 0;
+					break;
+				}
+			}
+			tempt = tempt + i + 1;
+			k++;
+			i = 0;
+			if (k == 3) {
+				strcpy(file2, tempt); //con lai la chuoi file2
+				break;
+			}
+		}
+	}
+  cout << port<<endl;
+  cout << file1<<endl;
+  cout << file2<<endl;
+	
+
+	listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(atoi(port));
+	
+	bind(listener, (SOCKADDR*)&addr, sizeof(addr));
+	listen(listener, 5);
+
+	client = accept(listener, NULL, NULL);
+	char msg[256];
+
+	int ret = recv(client, msg, sizeof(msg), 0);
+	if (ret <= 0) {
+		printf("Ket noi that bai!");
+		return 0;
+	}
+	
+	char location1[40] = "E:\\Test\\";
+	char location2[40] = "E:\\Test\\";
+	strcat(location1, file1);	//dia chi luu file client gui cau chao
+	strcat(location2, file2);	//dia chi luu file client nhan tin
+	FILE* fc = fopen(location1, "r");
+	FILE* f = fopen(location2, "w+");
+	
+	msg[ret] = 0;
+	//luu cau chao vao file fc
+	
+	printf("Client gui cau chao: %s\n", msg);
+
+	//doc tu file va gui cau chao toi client
+	fscanf(fc, "%[^\n]", msg);
+	send(client, msg, strlen(msg), 0);
+	
+	
+	while (1) {
+			ret = recv(client, msg, sizeof(msg), 0);
+			if (ret <= 0) {
+				cout << "ket noi bị ngat"<<endl;
+				break;
+			}
+			msg[ret] = 0;
+			//ghi vao file f2
+			fputs("Client says: ", f);
+			fputs(msg, f);
+			fputs("\n", f);
+			printf("Client says: %s\n", msg);
+		printf("Server says: ");
+		gets_s(msg);
+		if (strcmp(msg, "exit") == 0) {
+			break;
+		}
+		send(client, msg, strlen(msg), 0);
+	}
+
+	fclose(f);
+	fclose(fc);
+	closesocket(client);
+	WSACleanup();
+}

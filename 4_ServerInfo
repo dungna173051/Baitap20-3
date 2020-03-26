@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iostream>
+#pragma comment(lib, "ws2_32")
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+using namespace std;
+
+//Khoi tao struct nhan du lieu
+struct info_laptop {
+	string name;
+	string list_o_dia[10];
+	int kich_thuoc[10];
+	int amount;
+} mylaptop;
+
+int main() {
+	
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+		printf("Khoi tao winsock that bai!");
+		return 0;
+	}
+	char command[100];
+	char* port;
+	SOCKET client;
+	SOCKET listener;
+	SOCKADDR_IN addr;
+
+	// doc lenh tu ban phim
+	printf("Xin chao. Nhap lenh: ");
+	gets_s(command);
+
+	//Cat chuoi tu ki tu space dau tien
+	char* tempt = strstr(command, " ");
+	port = tempt + 1;
+
+	listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(atoi(port));
+
+	bind(listener, (SOCKADDR*)&addr, sizeof(addr));
+	listen(listener, 5);
+
+	client = accept(listener, NULL, NULL);
+
+	//nhan du lieu qua socket
+	int ret = recv(client, (char*)&mylaptop, sizeof(mylaptop), 0);
+	if (ret <= 0) {
+		printf("Ket noi that bai!");
+		printf("Loi la %d", ret);
+	}
+	else {
+		cout << "Ten may la " << mylaptop.name << endl;
+		printf("So luong o dia la: %d\n", mylaptop.amount);
+		for (int i = 0; i < mylaptop.amount; i++)
+			cout << "Ten o dia thu " << i + 1 
+			<< " la :" << mylaptop.list_o_dia[i] 
+			<< ", kich thuoc la: " <<mylaptop.kich_thuoc[i]<< endl;
+		
+	}
+	
+}

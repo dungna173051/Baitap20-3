@@ -1,0 +1,93 @@
+#include <stdio.h>
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32")
+
+int main() {
+	WSADATA wsa;
+	if( WSAStartup(MAKEWORD(2, 2), &wsa) ) {
+		printf("Khoi tao winsock that bai!");
+		return 0;
+	}
+
+	char command[100];
+	char* addr_string;
+	char* port;
+	SOCKET client;
+	SOCKADDR_IN addr;
+
+	
+	printf("Xin chao. Nhap lenh: ");
+	gets_s(command);
+
+	
+	char* tempt = strstr(command, " ");
+	tempt = tempt + 1;
+
+	//Cat chuoi duoc port tu sau ki tu space thu hai 
+	port = strstr(tempt, " ");
+	port = port + 1;
+
+	//Cat chuoi thu duoc addr
+	for (int i = 0; i < strlen(tempt); i++) {
+		if (tempt[i] == 32) {
+			tempt[i] = 0;
+			break;
+		}
+	}
+	addr_string = tempt;
+	printf("IP/Ten mien: %s port : %s \n", addr_string, port);
+	client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	
+	// IP hoặc phân giải tên miền
+	if (atoi(addr_string) != 0) {
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = inet_addr(addr_string);
+		addr.sin_port = htons(atoi(port));
+	}
+	else {
+		
+		addrinfo* info;
+		int ret = getaddrinfo(addr_string, "http", NULL, &info);
+		if (ret == 0) {
+			memcpy(&addr, info->ai_addr, info->ai_addrlen);
+		}
+		else {
+			printf("Getinfo failed!");
+			return 0;
+		}
+	}
+
+	// Connect 
+	int ret = connect(client, (SOCKADDR*)&addr, sizeof(addr));
+	if (ret == SOCKET_ERROR) {
+		ret = WSAGetLastError();
+		printf("Loi ket noi: %d", ret);
+		return 1;
+	}
+
+	char msg[256] = "Ket noi toi server thanh cong!";
+	char msg2[256] ;
+	send(client, msg, strlen(msg), 0);
+
+	while (1) {
+		ret = recv(client, msg, sizeof(msg), 0);
+		if (ret <= 0) {
+			printf("Close socket!");
+			break;
+		}
+		
+		//Xu ly du lieu
+		if(ret<256) msg[ret] = 0;
+		printf("Server says: %s", msg);
+		printf("\nYou says: ");
+		gets_s(msg2);
+		if (strcmp(msg2, "exit") ==0)	break;
+		send(client, msg2, strlen(msg2), 0);
+	}
+
+	closesocket(client);
+	WSACleanup();
+
+}

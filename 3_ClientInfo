@@ -1,0 +1,110 @@
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32")
+using namespace std;
+
+//khai bao struct luu du lieu
+struct info_laptop {
+	string name;
+	string list_o_dia[10];
+	int kich_thuoc[10];
+	int amount;
+} mylaptop;
+
+
+//Khoi tao Struct
+void khoitao() {
+
+	
+	printf("Ten may la: ");
+	cin>>(mylaptop.name); //name
+	printf("\nSo luong o dia: ");
+	scanf_s("%d", &mylaptop.amount); //so luong o dia
+	
+	for (int i = 0; i < mylaptop.amount; i++) {
+		printf("\nTen o dia thu %d: ", i + 1);
+		cin.ignore();
+		cin>> mylaptop.list_o_dia[i];
+		printf("\nKich thuoc o dia thu %d: ", i + 1);
+		scanf_s("%d", &mylaptop.kich_thuoc[i]);
+	}
+}
+
+int main() {
+	khoitao();
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+		printf("Khoi tao winsock that bai!");
+		return 0;
+	}
+
+	char command[100];
+	char* addr_string;
+	char* port;
+	SOCKET client;
+	SOCKADDR_IN addr;
+
+	// doc lenh tu ban phim
+	printf("Xin chao. Nhap lenh: ");
+	cin.ignore();
+	gets_s(command);
+
+	//Cat chuoi tu ki tu space dau tien
+	char* tempt = strstr(command, " ");
+	tempt = tempt + 1;
+
+	//Cat chuoi duoc port tu sau ki tu space thu hai 
+	port = strstr(tempt, " ");
+	port = port + 1;
+
+	//Cat chuoi thu duoc addr
+	for (int i = 0; i < strlen(tempt); i++) {
+		if (tempt[i] == 32) {
+			tempt[i] = 0;
+			break;
+		}
+	}
+	//dia chi ten mien
+	addr_string = tempt;
+
+	printf("IP/Ten mien: %s port : %s \n", addr_string, port);
+	client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+	//neu la dia chi IP
+	if (atoi(addr_string) != 0) {
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = inet_addr(addr_string);
+		addr.sin_port = htons(atoi(port));
+	}
+	else {
+		//Phan giai ten mien
+		addrinfo* info;
+		int ret = getaddrinfo(addr_string, "http", NULL, &info);
+		if (ret == 0) {
+			memcpy(&addr, info->ai_addr, info->ai_addrlen);
+		}
+		else {
+			printf("Getinfo failed!");
+			return 0;
+		}
+	}
+
+	//Ket noi
+	int ret = connect(client, (SOCKADDR*)&addr, sizeof(addr));
+	if (ret == SOCKET_ERROR) {
+		ret = WSAGetLastError();
+		printf("Loi ket noi: %d", ret);
+
+	}
+
+	// Gui du lieu struct mylaptop 
+	send(client, (char*)&mylaptop, sizeof(mylaptop), 0);
+
+	system("pause");
+	closesocket(client);
+	WSACleanup();
+}
